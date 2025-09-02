@@ -19,6 +19,12 @@ def check_current_service_device():
     try:
         print("🔍 检查当前服务的模型设备分布...")
         
+        # 添加项目路径
+        import sys
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if project_root not in sys.path:
+            sys.path.insert(0, project_root)
+            
         from src.chat_with_video.video_chat_service import VideoChatService
         
         # 创建服务
