@@ -67,9 +67,24 @@ class MiniCPMVInference:
                 print(f"设置环境变量: {key}={value}")
     
     def _check_xpu_availability(self) -> bool:
-        """检查Intel XPU设备可用性"""
+        """检查Intel XPU设备可用性 - 带DLL依赖绕过"""
         try:
-            is_available = torch.xpu.is_available()
+            # 首先尝试绕过可能的DLL依赖问题
+            print("尝试绕过Intel XPU DLL依赖问题...")
+            
+            # 方法1: 延迟导入torch.xpu
+            try:
+                import torch.xpu
+                is_available = torch.xpu.is_available()
+            except OSError as dll_error:
+                if "126" in str(dll_error) or "c10_xpu.dll" in str(dll_error):
+                    print(f"⚠️ Intel XPU DLL依赖问题: {dll_error}")
+                    print("尝试使用CPU模式作为回退...")
+                    self.device = 'cpu'
+                    return False
+                else:
+                    raise dll_error
+            
             if is_available:
                 device_count = torch.xpu.device_count()
                 current_device = torch.xpu.current_device()
@@ -85,9 +100,13 @@ class MiniCPMVInference:
                 return True
             else:
                 print("XPU状态: 不可用")
+                print("回退到CPU模式...")
+                self.device = 'cpu'
                 return False
         except Exception as e:
             print(f"XPU检查失败: {str(e)}")
+            print("强制回退到CPU模式...")
+            self.device = 'cpu'
             return False
     
     def _load_model(self):
